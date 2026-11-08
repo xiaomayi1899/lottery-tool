@@ -118,6 +118,7 @@ def matches_from_oklist(oklist):
             'official': {'had': {'h': it['had'][0], 'd': it['had'][1], 'a': it['had'][2], 'goalLine': '', 'update': ''},
                          'hhad': ({'h': it['hhad'][0], 'd': it['hhad'][1], 'a': it['hhad'][2],
                                    'goalLine': ('+%d' % rq if rq > 0 else str(rq)), 'update': ''} if it.get('hhad') else None)},
+            '_fallback': True,
         })
     return out
 
@@ -430,6 +431,14 @@ def build(matches_official, peilv, zhishu, custom, oklist, prev):
     for m in matches_official:
         num = m['num']
         pv = peilv_by_num.get(num) or {}
+        if m.pop('_fallback', None) and pv:
+            # 兑底模式: 用凯利页标题补全队名/联赛/排名/让球
+            for k in ('league', 'home', 'away', 'hand'):
+                if pv.get(k):
+                    m[k] = pv[k]
+            for k in ('homeRank', 'awayRank'):
+                if pv.get(k) is not None:
+                    m[k] = pv[k]
         zs = zhishu.get(num) or {}
         ok = oklist.get(num) or {}
         ci = custom.get(str(ok.get('mid') or pv.get('mid') or '')) or {}
