@@ -1,3 +1,4 @@
 .zwork/
 __pycache__/
 *.pyc
+tools/_*.*
