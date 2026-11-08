@@ -88,6 +88,40 @@ def parse_rank(s):
     return int(m.group(0)) if m else None
 
 
+def matches_from_oklist(oklist):
+    """官方 API 不可用时的兑底: 直接用澳客赛程页当赛程+赔率源。
+    只取未售完(data-end=0)且带胜平负赔率的场次。排名不可用(引擎兼容空值)。"""
+    out = []
+    now = datetime.datetime.now()
+    for num, it in (oklist or {}).items():
+        if not it.get('had') or it.get('end'):
+            continue
+        kick = it.get('kick') or ''
+        try:
+            dt = datetime.datetime.strptime(kick, '%Y-%m-%d %H:%M')
+        except Exception:  # noqa: BLE001
+            continue
+        if dt < now - datetime.timedelta(hours=3) or dt > now + datetime.timedelta(days=4):
+            continue
+        wk, seq = num[:2], num[2:]
+        rq = it.get('rq') or 0
+        out.append({
+            'key': '%s_%s' % (dt.strftime('%y%m%d'), num),
+            'matchNumDate': dt.strftime('%y%m%d'),
+            'num': num,
+            'date': dt.strftime('%Y-%m-%d'),
+            'time': dt.strftime('%H:%M'),
+            'league': it.get('league') or '',
+            'home': it.get('home') or ('主队' + seq), 'homeAll': '',
+            'away': it.get('away') or ('客队' + seq), 'awayAll': '',
+            'homeRank': None, 'awayRank': None,
+            'official': {'had': {'h': it['had'][0], 'd': it['had'][1], 'a': it['had'][2], 'goalLine': '', 'update': ''},
+                         'hhad': ({'h': it['hhad'][0], 'd': it['hhad'][1], 'a': it['hhad'][2],
+                                   'goalLine': ('+%d' % rq if rq > 0 else str(rq)), 'update': ''} if it.get('hhad') else None)},
+        })
+    return out
+
+
 def slim_odds(o):
     if not o:
         return None
@@ -335,7 +369,7 @@ def fetch_okooo_custom(dates):
 
 
 def fetch_okooo_list():
-    """澳客竞彩赛程页 → {ordercn: {mid, hname, aname, had, hhad, kick}}"""
+    """澳客竞彩赛程页 → {ordercn: {mid, num, kick, had, hhad, rq, end}}"""
     url = 'https://www.okooo.com/jingcai/'
     try:
         raw = http_get(url, {'Referer': 'https://www.okooo.com/'})
@@ -350,9 +384,19 @@ def fetch_okooo_list():
             if not mid or not num:
                 continue
             kick = re.search(r'比赛时间[:：]([\d\-]+ \d{2}:\d{2})', b)
+            rqm = re.search(r'data-rq="(-?\d+)"', b)
+            end = re.search(r'data-end="(\d)"', b)
+            hname = re.search(r'data-hname="([^"]+)"', b)
+            aname = re.search(r'data-aname="([^"]+)"', b)
+            lg = re.search(r'<a class="saiming[^"]*"[^>]*title="([^"]+)"', b)
             sps = re.findall(r'data-sp="(\d+\.\d+)"', b)
             item = {'mid': int(mid.group(1)), 'num': num.group(1),
-                    'kick': kick.group(1) if kick else ''}
+                    'kick': kick.group(1) if kick else '',
+                    'rq': int(rqm.group(1)) if rqm else 0,
+                    'end': int(end.group(1)) if end else 0,
+                    'home': hname.group(1) if hname else '',
+                    'away': aname.group(1) if aname else '',
+                    'league': lg.group(1) if lg else ''}
             if len(sps) >= 6:
                 item['had'] = [float(x) for x in sps[0:3]]
                 item['hhad'] = [float(x) for x in sps[3:6]]
@@ -460,16 +504,27 @@ def main():
 
     sources = {'official': 'error', 'okooo_list': '-', 'okooo_peilv': '-', 'okooo_zhishu': '-', 'okooo_custom': '-'}
 
-    matches_official = fetch_official()
-    if matches_official:
-        sources['official'] = 'ok'
+    matches_official = []
+    try:
+        matches_official = fetch_official()
+        if matches_official:
+            sources['official'] = 'ok'
+    except Exception as e:  # noqa: BLE001
+        print('  [official] %s' % str(e)[:160], file=sys.stderr)
     print('official matches: %d' % len(matches_official), file=sys.stderr)
 
     peilv, zhishu, custom, oklist = [], {}, {}, {}
+    polite_sleep(random.uniform(2, 4), random.uniform(5, 8))
+    oklist = fetch_okooo_list()
+    sources['okooo_list'] = 'ok' if oklist else 'fail'
+
+    if not matches_official and oklist:
+        # 官方兑底: 澳客赛程页充当赛程+赔率源
+        matches_official = matches_from_oklist(oklist)
+        sources['official'] = 'okooo-fallback(%d)' % len(matches_official)
+        print('official fallback via okooo list: %d matches' % len(matches_official), file=sys.stderr)
+
     if matches_official and not args.skip_okooo:
-        polite_sleep(random.uniform(3, 6), random.uniform(8, 12))
-        oklist = fetch_okooo_list()
-        sources['okooo_list'] = 'ok' if oklist else 'fail'
         polite_sleep()
         peilv = fetch_okooo_peilv(2)
         sources['okooo_peilv'] = 'ok(%d)' % len(peilv) if peilv else 'fail'
@@ -493,6 +548,8 @@ def main():
     print(json.dumps({'generatedAt': doc['generatedAt'], 'sources': sources,
                       'matches': len(matches), 'withBooks': sum(1 for m in matches if (m['okooo'] or {}).get('books'))},
                      ensure_ascii=False))
+    # 只要 jingcai.json 存在就算成功(保持旧数据), 便于 Actions 不中断
+    sys.exit(0)
 
 
 if __name__ == '__main__':
