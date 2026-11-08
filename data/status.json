@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-11-08T13:16:16+08:00",
+ "updatedAt": "2026-11-08T11:48:38+00:00",
  "ssq": {
   "count": 1008,
   "last": "2026-11-05"
@@ -9,14 +9,14 @@
   "last": "2026-11-07"
  },
  "jingcai": {
-  "count": 28,
+  "count": 24,
   "sources": {
-   "official": "ok",
+   "official": "okooo-fallback(24)",
    "okooo_list": "ok",
    "okooo_peilv": "ok(15)",
-   "okooo_zhishu": "ok(30)",
+   "okooo_zhishu": "ok(25)",
    "okooo_custom": "ok(59)"
   },
-  "generatedAt": "2026-11-08T13:16:16+08:00"
+  "generatedAt": "2026-11-08T11:48:38+00:00"
  }
 }
