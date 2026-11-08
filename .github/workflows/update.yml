@@ -1,0 +1,46 @@
+name: update-data
+
+on:
+  schedule:
+    # UTC 时间；北京时间 = UTC+8 → 每日 09:00/13:00/17:00/21:00/22:00 自动运行
+    - cron: '0 1,5,9,13,14 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 更新数字彩开奖(官方)
+        run: python tools/update_lottery.py
+
+      - name: 更新竞彩(官方+澳客)
+        run: python tools/update_jingcai.py
+
+      - name: 生成状态
+        run: python tools/update_status.py
+
+      - name: 提交
+        run: |
+          git config user.name "data-bot"
+          git config user.email "action@github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "无数据变化"
+          else
+            git commit -m "data: auto update $(date -u +'%F %T') UTC"
+            git push
+          fi

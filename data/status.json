@@ -1,0 +1,22 @@
+{
+ "updatedAt": "2026-11-08T12:06:04+08:00",
+ "ssq": {
+  "count": 1008,
+  "last": "2026-11-05"
+ },
+ "dlt": {
+  "count": 1009,
+  "last": "2026-11-07"
+ },
+ "jingcai": {
+  "count": 30,
+  "sources": {
+   "official": "ok",
+   "okooo_list": "ok",
+   "okooo_peilv": "ok(15)",
+   "okooo_zhishu": "ok(30)",
+   "okooo_custom": "ok(59)"
+  },
+  "generatedAt": "2026-11-08T12:06:04+08:00"
+ }
+}
