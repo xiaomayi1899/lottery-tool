@@ -1,22 +1,22 @@
 {
- "updatedAt": "2026-11-19T08:33:21+00:00",
+ "updatedAt": "2026-11-19T18:02:59+00:00",
  "ssq": {
-  "count": 1013,
-  "last": "2026-11-17"
+  "count": 1014,
+  "last": "2026-11-19"
  },
  "dlt": {
   "count": 1014,
   "last": "2026-11-18"
  },
  "jingcai": {
-  "count": 12,
+  "count": 8,
   "sources": {
-   "official": "okooo-fallback(12)",
+   "official": "okooo-fallback(8)",
    "okooo_list": "ok",
    "okooo_peilv": "ok(12)",
    "okooo_zhishu": "ok(12)",
    "okooo_custom": "ok(16)"
   },
-  "generatedAt": "2026-11-19T08:33:21+00:00"
+  "generatedAt": "2026-11-19T18:02:59+00:00"
  }
 }
